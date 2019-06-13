@@ -88,14 +88,6 @@ jq -c -n \
     > /tmp/gh-result
 
 #
-# check retry counter
-#
-
-REMAINING_TRIES=5
-
-while [[ $REMAINING_TRIES -gt 0 ]]; do
-
-#
 # lookup
 #
 
@@ -115,16 +107,6 @@ curlgh "$source_endpoint/repos/$source_repository/commits/$source_branch/status"
 [[ -s /tmp/status ]] \
   && jq -e '.status' < /tmp/status > /dev/null \
   && break
-
-#
-# decrease retry counter and loop
-#
-
-REMAINING_TRIES=$(($REMAINING_TRIES - 1))
-
-sleep 1
-
-done
 
 #
 # concourse
