@@ -15,7 +15,7 @@ eval $( jq -r '{
 # check retry counter
 #
 
-REMAINING_TRIES=5
+REMAINING_TRIES="${retry_count:-5}"
 
 while [[ $REMAINING_TRIES -gt 0 ]]; do
 
@@ -46,7 +46,7 @@ jq -e '.status' < /tmp/status > /dev/null \
 
 REMAINING_TRIES=$(($REMAINING_TRIES - 1))
 
-sleep 1
+sleep "${retry_timeout:-3}"
 
 done
 
