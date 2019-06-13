@@ -45,6 +45,8 @@ Parameters:
  * `target_url` - the target URL to associate with the status (default: concourse build link)
  * `sleep_duration` - the amount of time in seconds to wait while retrying for the status (default: 3)
  * `max_attempts` - the number of times to retry for the status to be ready (default: 5)
+ * `retry_timeout` - the amount of time in seconds to wait while retrying for the status (Default: 3)
+ * `retry_count` - the number of times to retry for the status to be ready (Default: 5)
 
 ## Example
 
