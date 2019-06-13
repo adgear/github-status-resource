@@ -11,6 +11,13 @@ eval $( jq -r '{
   "version_status": .version.status
 } | to_entries[] | .key + "=" + @sh "\(.value)"' < /tmp/stdin )
 
+#
+# check retry counter
+#
+
+REMAINING_TRIES=5
+
+while [[ $REMAINING_TRIES -gt 0 ]]; do
 
 #
 # lookup
@@ -33,6 +40,15 @@ curlgh "$source_endpoint/repos/$source_repository/commits/$version_commit/status
 jq -e '.status' < /tmp/status > /dev/null \
   || fatal "Status not found on $( jq -r '.sha' < /tmp/status )"
 
+#
+# decrease retry counter and loop
+#
+
+REMAINING_TRIES=$(($REMAINING_TRIES - 1))
+
+sleep 1
+
+done
 
 #
 # concourse
