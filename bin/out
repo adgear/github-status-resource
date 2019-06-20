@@ -112,12 +112,14 @@ curlgh "$source_endpoint/repos/$source_repository/commits/$source_branch/status"
 # validate
 #
 
+set +e
 jq -e '.status' < /tmp/status > /dev/null
 check_status="$?"
+set -e
 
 if [ "$check_status" -eq 0 ]; then
   break
-elif [ "$check_status" -gt 0 ] && [ "$REMAINING_TRIES" -le 1 ]; then
+elif [ "$check_status" -gt 0 ] && [ "$REMAINING_TRIES" -le 0 ]; then
   fatal "Status not found on $( jq -r '.sha' < /tmp/status )"
 fi
 
@@ -127,7 +129,7 @@ fi
 
 REMAINING_TRIES=$(($REMAINING_TRIES - 1))
 
-sleep "${retry_timeout:-3}"
+sleep "${retry_delay:-3}"
 
 done
 

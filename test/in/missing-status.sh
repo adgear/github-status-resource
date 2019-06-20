@@ -19,7 +19,7 @@ mkdir $in_dir
 
 set +e
 
-$DIR/bin/in "$in_dir" > $TMPDIR/resource-$$ 2>&1 <<EOF
+retry_count=0 $DIR/bin/in "$in_dir" > $TMPDIR/resource-$$ 2>&1 <<EOF
 {
   "version": {
     "commit": "6dcb09b5b57875f334f61aebed695e2e4193db5e",
