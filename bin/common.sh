@@ -59,7 +59,7 @@ curlgh () {
 
     http_status=$(head -n1 /tmp/responseheaders | sed 's|HTTP.* \([0-9]*\) .*|\1|')
     # If HTTP status is OK, break the retry loop now to carry on (skip all error handling & retries)
-    if [ "$http_status" -eq "200" ]; then
+    if [ "$http_status" != "${http_status#20[01]}" ]; then
       break;
     fi
 
