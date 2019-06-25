@@ -58,8 +58,8 @@ curlgh () {
     curl $skip_verify_arg -s -D/tmp/responseheaders -H "Authorization: token $source_access_token" $@ > /tmp/rawresponse
 
     http_status=$(head -n1 /tmp/responseheaders | sed 's|HTTP.* \([0-9]*\) .*|\1|')
-    # If HTTP status is OK, break the retry loop now to carry on (skip all error handling & retries)
-    if [ "$http_status" -eq "200" ]; then
+    # If HTTP status is OK (2XX), break the retry loop now to carry on (skip all error handling & retries)
+    if [[ "$http_status" =~ 2[0-9]{2} ]]; then
       break;
     fi
 
