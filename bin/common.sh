@@ -30,6 +30,9 @@ load_source () {
     } | to_entries[] | .key + "=" + @sh "\(.value)"
   ' < /tmp/stdin )
 
+  source_access_token=$(echo $source_access_token | sed -e 's/,/\n/g')
+  token_count=$(echo "$source_access_token" | wc -l)
+
   source_endpoint=$( echo "$source_endpoint" | sed 's#/$##' )
 }
 
@@ -50,5 +53,60 @@ curlgh () {
   else
     skip_verify_arg=""
   fi
-  curl $skip_verify_arg -s -H "Authorization: token $source_access_token" $@
+
+  REMAINING_TRIES="${retry_count:-5}"
+
+  while true; do
+    # Output the response headers and body to two separate files so that we can easily work on them both
+    if [ "$token_count" -gt 1 ]; then
+      api_token=$(echo "$source_access_token" | sed -n "$(shuf -i 1-${token_count} -n 1)p")
+    else
+      api_token=$source_access_token
+    fi
+    curl $skip_verify_arg -s -D/tmp/responseheaders -H "Authorization: token $api_token" $@ > /tmp/rawresponse
+
+    http_status=$(head -n1 /tmp/responseheaders | sed 's|HTTP.* \([0-9]*\) .*|\1|')
+    # If HTTP status is OK, break the retry loop now to carry on (skip all error handling & retries)
+    if [ "$http_status" != "${http_status#20[01]}" ]; then
+      break;
+    fi
+
+    if [ "$http_status" -ge 400 ]; then
+      if [ "$http_status" -le 499 ]; then # 400-499 range
+        if [ $(grep -i 'rate-limit' /tmp/rawresponse || echo '0') -ge 1 ]; then
+          now=$(date "+%s")
+          ratelimit_reset=$(cat /tmp/responseheaders | sed -n 's|X-RateLimit-Reset: \([0-9]*\)|\1|p')
+
+          sleep_duration="$((ratelimit_reset - now))"
+          # If our system clock is in advance to GitHub's the result of sleep_duration might be a negative number
+          if [[ "$sleep_duration" -lt 1 ]]; then
+            sleep_duration="1"
+          fi
+          echo "Limited by the API rate limit. Script will retry at $( date -d@$((now + sleep_duration)) )" >&2
+        else
+          fatal "Authentication error against the GitHub API"
+        fi
+      else # 500+ range
+        echo "Unexpected HTTP $(echo $http_status) when querying the GitHub API" >&2
+        sleep_duration="${retry_delay:-3}"
+      fi
+    else # Other status code that's not 200 OK, nor in the 400+ range
+      fatal "Unexpected HTTP status code when querying the GitHub API: $(echo $http_status)"
+    fi
+
+
+    # Exit if we have reach the maximum number of attemps, or sleep and retry otherwise
+    if [ "$REMAINING_TRIES" -le 0 ]; then
+      fatal "Maximum number of attempts reached while trying to query the GitHub API"
+    fi
+
+    echo "Will retry in $sleep_duration seconds" >&2
+
+    REMAINING_TRIES=$(($REMAINING_TRIES - 1))
+
+    sleep $sleep_duration
+
+  done
+
+  cat /tmp/rawresponse
 }
